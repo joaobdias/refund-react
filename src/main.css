@@ -1,6 +1,5 @@
 @import "tailwindcss";
 
-//changing default colors and fonts to taildwind CSS
 @theme {
 
     --color-gray-100: #1f2523;
