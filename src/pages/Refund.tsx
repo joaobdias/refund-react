@@ -6,24 +6,57 @@ import { CATEGORIES, CATEGORIES_KEYS } from "../utils/categories"
 import React, { useState } from "react"
 import { useNavigate, useParams } from "react-router"
 import fileSvg from "../assets/file.svg"
+import {z, ZodError} from "zod"
+import { AxiosError } from "axios"
+import { api } from "../services/api"
+import { useAuth } from "../hooks/useAuth"
+
+const refundSchema = z.object ({
+    name: z.string().min(3),
+    category: z.string().min(1),
+    amount: z.coerce.number().positive()
+})
 
 export function Refund () {
 
-    const [name, setName] = useState("Teste")
-    const [category, setCategory] = useState("transport")
-    const [amount, setAmount] = useState("34")
+    const [name, setName] = useState("")
+    const [category, setCategory] = useState("")
+    const [amount, setAmount] = useState("")
     const [isLoad, setIsLoad] = useState(false)
     const [filename, setFilename] = useState<File | null>(null)
 
     const navigate = useNavigate()
     const params = useParams<{id: string}>()
 
-    function onSubmit (e: React.FormEvent){
+    async function onSubmit (e: React.FormEvent){
         e.preventDefault()
 
         if (params.id) return navigate(-1)
         
+        try {
+
+        setIsLoad(true)
+
+        if(!filename) return alert("Adicione um arquivo de comprovante")
+
+        const fileUploadForm = new FormData()
+        fileUploadForm.append("file", filename)
+
+        const response = await api.post("/uploads", fileUploadForm)
+
+        console.log(response)
+        
+        const data = refundSchema.parse({name, category, amount: amount.replace(",",".")})
+        
+        await api.post("/refunds", {...data, filename: response.data.filename})
         navigate("/confirm", {state: {fromSubmit: true}})
+        
+        } catch (error) {
+            if(error instanceof ZodError) return {message: error.issues[0].message}
+            if(error instanceof AxiosError) return {message: error.response?.data.message}
+            return {message: "Não foi possível fazer o login"} //state from useACtionState always catch the return
+        } finally {setIsLoad(false)}
+
     }
 
     return <form onSubmit={onSubmit} className="bg-gray-500 w-full rounded-xl flex flex-col p-10 gap-6 lg:min-w-[512px]">
@@ -45,10 +78,13 @@ export function Refund () {
         </div>
 
         {
-            params.id ? <a href="asdsd" target="_blank" className="text-sm text-green-100 font-semibold flex items-center justify-center gap-2 my-6 hover:opacity-75 transition ease-linear">
+            params.id ? ( 
+            <a href="asdsd" target="_blank" className="text-sm text-green-100 font-semibold flex items-center justify-center gap-2 my-6 hover:opacity-75 transition ease-linear">
                 <img src={fileSvg} alt="ícone de arquivo"/>
-                Abrir comprovante</a> : <Upload onChange={(e) => e.target.files && setFilename(e.target.files[0])}/>
-        }
+                Abrir comprovante
+            </a> ) : ( 
+                <Upload filename={filename && filename.name} onChange={(e) => e.target.files && setFilename(e.target.files[0])}/>
+        )}
 
         <Button type="submit" isLoading={isLoad}> 
             {params.id ? "Voltar" : "Enviar"}
