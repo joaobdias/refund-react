@@ -2,23 +2,28 @@ import { Input } from "../components/Input"
 import { Button } from "../components/Button"
 import { useState } from "react"
 import {z, ZodError} from "zod"
+import { AxiosError } from "axios"
+import { api } from "../services/api.ts"
+import { useNavigate } from "react-router"
 
 const signUpSchema = z.object ({
     email: z.email({message: "E-mail inválido"}).trim(),
     name: z.string().trim().min(1, {message: "Informe um nome"}),
-    pass: z.string().min(6, {message: "Informe uma senha de mínimo de 6 caracteres"}),
-    passConfirm: z.string({message: "Confirme a senha"}),
-}).refine((data) => data.pass === data.passConfirm, {message: "Senhas não concidem", path: ["passConfirm"]})
+    password: z.string().min(6, {message: "Informe uma senha de mínimo de 6 caracteres"}),
+    passwordConfirm: z.string({message: "Confirme a senha"}),
+}).refine((data) => data.password === data.passwordConfirm, {message: "Senhas não concidem", path: ["passConfirm"]})
 
 export function SignUp(){
 
     const [name, setName] = useState("")
     const [email, setEmail] = useState("")
-    const [pass, setPass] = useState("")
-    const [passConfirm, setPassConfirm] = useState("")
+    const [password, setPass] = useState("")
+    const [passwordConfirm, setPassConfirm] = useState("")
     const [load, setIsLoad] = useState(false)
 
-    function onSubmit(e: React.FormEvent){
+    const nav = useNavigate()
+
+    async function onSubmit(e: React.FormEvent){
         e.preventDefault()
 
         try {
@@ -26,13 +31,17 @@ export function SignUp(){
             const data = signUpSchema.parse({
                 email,
                 name,
-                pass,
-                passConfirm
+                password,
+                passwordConfirm
             })
 
+        await api.post("/users", data)
+
+        if (confirm("Cadastrado com sucesso. Ir para a tela de login?")) nav("/")
+
         } catch (error) {
-            if(error instanceof ZodError) return alert(error.issues[0].message)
-            
+            if(error instanceof ZodError) return alert("Zod: " + error.issues[0].message)
+            if(error instanceof AxiosError) return alert("Axios: " + error.response?.data.message)
             alert("Não foi possível cadastrar")
         } finally {
             setIsLoad(false)
