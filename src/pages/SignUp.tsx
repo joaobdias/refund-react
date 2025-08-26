@@ -40,8 +40,8 @@ export function SignUp(){
         if (confirm("Cadastrado com sucesso. Ir para a tela de login?")) nav("/")
 
         } catch (error) {
-            if(error instanceof ZodError) return alert("Zod: " + error.issues[0].message)
-            if(error instanceof AxiosError) return alert("Axios: " + error.response?.data.message)
+            if(error instanceof ZodError) return alert(error.issues[0].message)
+            if(error instanceof AxiosError) return alert(error.response?.data.message)
             alert("Não foi possível cadastrar")
         } finally {
             setIsLoad(false)
