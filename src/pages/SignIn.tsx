@@ -4,6 +4,7 @@ import { useActionState } from "react"
 import { z, ZodError} from "zod"
 import { AxiosError, Axios } from "axios"
 import { api } from "../services/api"
+import { useAuth } from "../hooks/useAuth"
 
 const signInScheme = z.object ({
     email: z.string().email({message: "Digite um email válido"}).trim(),
@@ -13,6 +14,8 @@ const signInScheme = z.object ({
 export function SignIn(){
     
     const [state, formAction, isLoading] = useActionState(onAction, null)
+
+    const auth = useAuth()
 
     async function onAction(_: any, formData: FormData){
         try {
@@ -24,6 +27,7 @@ export function SignIn(){
         }) 
 
         const response = await api.post("/sessions", data)
+        auth.save(response.data)
         
         } catch (error) {
             if(error instanceof ZodError) return {message: error.issues[0].message}
