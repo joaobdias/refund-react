@@ -3,13 +3,14 @@ import { Upload } from "../components/Upload"
 import { Select } from "../components/Select"
 import { Button } from "../components/Button"
 import { CATEGORIES, CATEGORIES_KEYS } from "../utils/categories"
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router"
 import fileSvg from "../assets/file.svg"
 import {z, ZodError} from "zod"
 import { AxiosError } from "axios"
 import { api } from "../services/api"
 import { useAuth } from "../hooks/useAuth"
+import { formatCurrency } from "../utils/formatCurrency"
 
 const refundSchema = z.object ({
     name: z.string().min(3),
@@ -24,6 +25,7 @@ export function Refund () {
     const [amount, setAmount] = useState("")
     const [isLoad, setIsLoad] = useState(false)
     const [filename, setFilename] = useState<File | null>(null)
+    const [fileURL, setFileURL] = useState<string | null>
 
     const navigate = useNavigate()
     const params = useParams<{id: string}>()
@@ -59,6 +61,32 @@ export function Refund () {
 
     }
 
+    async function fetchRefund(id:string) {
+
+        try {
+        
+            const response = await api.get<RefundAPIResponse>(`/refunds/${id}`)
+
+            setName(response.data.name)
+            setCategory(response.data.category)
+            setAmount(formatCurrency(response.data.amount))
+            setFileURL(response.data.filename)
+
+        } catch (error) {
+            if(error instanceof ZodError) return {message: error.issues[0].message}
+            if(error instanceof AxiosError) return {message: error.response?.data.message}
+            return {message: "Não foi possível fazer o login"} //state from useACtionState always catch the return
+        } finally {setIsLoad(false)}
+
+        
+    }
+
+    useEffect(() => {
+        if(params.id){
+            fetchRefund(params.id)
+        }
+    }, [params.id])
+
     return <form onSubmit={onSubmit} className="bg-gray-500 w-full rounded-xl flex flex-col p-10 gap-6 lg:min-w-[512px]">
         <header>
             <h1 className="text-xl font-bold text-gray-100">Solicitação de reembolso</h1>
@@ -77,9 +105,8 @@ export function Refund () {
             <Input legend="Valor" required value={amount} onChange={(e) => setAmount(e.target.value)} disabled={!!params.id}/>
         </div>
 
-        {
-            params.id ? ( 
-            <a href="asdsd" target="_blank" className="text-sm text-green-100 font-semibold flex items-center justify-center gap-2 my-6 hover:opacity-75 transition ease-linear">
+        {params.id && fileURL ? ( 
+            <a href={`http://localhost:3333/uploads/${setFileURL}`} target="_blank" className="text-sm text-green-100 font-semibold flex items-center justify-center gap-2 my-6 hover:opacity-75 transition ease-linear">
                 <img src={fileSvg} alt="ícone de arquivo"/>
                 Abrir comprovante
             </a> ) : ( 
